@@ -1,0 +1,11 @@
+# Installed modules
+node_modules
+
+# build directory
+build
+
+# Web Driver
+geckodriver.exe
+
+# Exported data files in .csv
+*.csv

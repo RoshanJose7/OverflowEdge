@@ -1,0 +1,27 @@
+{
+  "name": "webscraper-node",
+  "version": "1.0.0",
+  "description": "A NodeJS based Web Scraper that scrapes all the newest Questions from StackOverflow and exports it into a CSV file",
+  "author": "RoshanJose7",
+  "repository": "https://github.com/RoshanJose7/webscraper-node.git",
+  "license": "MIT",
+  "scripts": {
+    "build": "rimraf ./build && tsc",
+    "start": "npm run build && node build/main.js",
+    "start:dev": "nodemon"
+  },
+  "dependencies": {
+    "redis": "^4.0.3",
+    "enquirer": "^2.3.6",
+    "export-to-csv": "^0.2.1",
+    "selenium-webdriver": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.14",
+    "@types/selenium-webdriver": "^4.0.16",
+    "nodemon": "^2.0.15",
+    "rimraf": "^3.0.2",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.5"
+  }
+}
