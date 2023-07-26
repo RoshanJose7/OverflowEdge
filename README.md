@@ -1,8 +1,7 @@
 
-# Web Scraper
+# OverflowEdge
 
-Backend Internship assignment for Growth School.
-A NodeJS based Web Scraper that scrapes all the newest Questions from StackOverflow and exports it into a CSV file.
+Introducing OverflowEdge: Your Dev's Edge! This TypeScript NodeJS web scraping script fetches the latest StackOverflow questions and exports them to CSV. Stay updated and seize the opportunity to be the first to answer. Empower your development journey with StackFlowScraper! 🚀📈 #WebScraping #StayUpdated #DevEdge
 
 
 ## Features
