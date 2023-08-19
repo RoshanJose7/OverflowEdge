@@ -4,6 +4,8 @@ import { createClient } from "redis";
 import { ExportToCsv } from "export-to-csv";
 import { Builder, By, WebDriver, until } from "selenium-webdriver";
 
+const REDIS_URL = "redis://default:ostello123@localhost:6379";
+
 type Question = {
   question: string;
   url: string;
@@ -14,7 +16,7 @@ type Question = {
 };
 
 // Initialize the Redis Database, Selenium Web driver
-async function Init(url: string) {
+async function main(url: string) {
   // generate questions to be to the user for input at run time
   const askQuestionsLimit = await prompt({
     type: "input",
@@ -33,18 +35,18 @@ async function Init(url: string) {
   let questions: Question[] = [];
 
   // client for the redis in-memory database
-  const client = createClient();
+  // const client = createClient({ url: REDIS_URL });
 
   console.log("\nStarting Firefox...");
   // Selenium Web Driver for the Firefox Browser
   const driver = await new Builder().forBrowser("firefox").build();
 
-  console.log("Conneecting to Redis...");
-  // Listen for connections errors, if any
-  client.on("error", (err) => console.error("Redis Client error", err));
-  await client.connect();
+  // console.log("Connecting to Redis...");
+  // // Listen for connections errors, if any
+  // client.on("error", (err) => console.error("Redis Client error", err));
+  // await client.connect();
 
-  console.log("\n\nQuestions fetched!");
+  // console.log("\n\nQuestions fetched!");
 
   // loop up to the total limit
   for (
@@ -60,22 +62,25 @@ async function Init(url: string) {
     // call get questions function
     // webdriver and questions array is passed
     const questionsForPage = await GetQuestionsFromPage(driver);
-    questions = [...questionsForPage, ...questions];
+    console.log("questionsForPage: ", questionsForPage);
+
+    questions = [...questions, ...questionsForPage];
   }
 
   console.log("\n\nQuestions fetched!");
+  console.log("questions: ", questions);
 
-  // Store all questions in Redis
-  await client.set("questions", JSON.stringify(questions));
-  exporttoCSV(
-    JSON.parse(await client.get("questions")),
-    askFileName["fileName"]
-  );
+  // // Store all questions in Redis
+  // await client.set("questions", JSON.stringify(questions));
+  //
+  // console.log(await client.get("questions"));
+
   await driver.quit();
+  await exportToCSV(questions, askFileName["fileName"]);
 }
 
 // Store all JSON data and export to a CSV file
-async function exporttoCSV(questions: any[], fileName: string) {
+async function exportToCSV(questions: Question[], fileName: string) {
   const options = {
     fieldSeparator: ",",
     quoteStrings: '"',
@@ -89,7 +94,7 @@ async function exporttoCSV(questions: any[], fileName: string) {
   };
 
   // generating CSV data
-  const csvData = new ExportToCsv(options).generateCsv(questions, true);
+  const csvData = new ExportToCsv(options).generateCsv(JSON.stringify(questions), true);
   writeFileSync(fileName, csvData, {
     encoding: "utf-8",
   });
@@ -103,47 +108,42 @@ async function GetQuestionsFromPage(driver: WebDriver): Promise<Question[]> {
     // wait for the Questions div to load dynamically
     await driver.wait(until.elementLocated(By.id("questions")));
     const QuestionsDiv = await driver.findElement(By.id("questions"));
+
     const QuestionSummaryDivs = await QuestionsDiv.findElements(
-      By.css(".question-summary")
+      By.css(".js-post-summary")
     );
 
     // extract each question from the Questions ID div
-    const requests = QuestionSummaryDivs.map(async (questionSummaryDiv) => {
+    const requests = QuestionSummaryDivs.map(async (questionSummaryDiv, idx) => {
       const question = await (
-        await questionSummaryDiv.findElement(By.css(".summary > h3 > a"))
+        await questionSummaryDiv.findElement(By.css(".s-post-summary--content > h3 > a"))
       ).getText();
 
       const url = await (
-        await questionSummaryDiv.findElement(By.css(".summary > h3 > a"))
+        await questionSummaryDiv.findElement(By.css(".s-post-summary--content > h3 > a"))
       ).getAttribute("href");
 
-      const totalViews = (
-        await (
+      const totalViews = await (
           await questionSummaryDiv.findElement(
-            By.css(".statscontainer > .views")
+            By.css(".s-post-summary--stats > div:nth-child(3) > span:first-child")
           )
-        ).getText()
-      ).split("")[0];
+        ).getText();
 
       const totalVotes = await (
         await questionSummaryDiv.findElement(
-          By.css(
-            ".statscontainer > .stats > .vote > .votes > .vote-count-post > strong"
-          )
+            By.css(".s-post-summary--stats > div:nth-child(1) > span:first-child")
         )
       ).getText();
 
       const totalAnswers = await (
         await questionSummaryDiv.findElement(
-          By.css(".statscontainer > .stats > .status > strong")
+            By.css(".s-post-summary--stats > div:nth-child(2) > span:first-child")
         )
       ).getText();
 
       const askedOn = await (
         await questionSummaryDiv.findElement(
-          By.css(
-            ".summary > .ai-start > .started > .user-info > .user-action-time > .relativetime"
-          )
+          By.xpath(`/html/body/div[3]/div[2]/div[1]/div[3]/div[${idx + 1}]/div[2]/div[2]/div[2]/time/span`)
         )
       ).getText();
 
@@ -157,10 +157,10 @@ async function GetQuestionsFromPage(driver: WebDriver): Promise<Question[]> {
       };
     });
 
-    return Promise.all(requests);
+    return await Promise.all(requests);
   } catch (e) {
     console.error(e);
   }
 }
 
-Init("https://stackoverflow.com/questions");
+main("https://stackoverflow.com/questions");
